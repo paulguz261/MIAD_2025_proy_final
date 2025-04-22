@@ -1,0 +1,63 @@
+# Configuración del proyecto
+
+# Configuración del servidor
+server:
+  host: 0.0.0.0
+  port: 5000
+  debug: true
+
+# Configuración de la base de datos
+database:
+  type: sqlite
+  path: backend/data/processed/water_data.db
+
+# Configuración de los clientes
+clients:
+  clienteA:
+    ubicacion: Ica
+    presion:
+      min: 1.5
+      max: 3.5
+    temperatura:
+      min: 15
+      max: 30
+    volumen:
+      min: 200
+      max: 500
+  clienteB:
+    ubicacion: Chincha
+    presion:
+      min: 1.5
+      max: 3.5
+    temperatura:
+      min: 15
+      max: 30
+    volumen:
+      min: 300
+      max: 600
+  clienteC:
+    ubicacion: Pisco
+    presion:
+      min: 1.5
+      max: 3.5
+    temperatura:
+      min: 15
+      max: 30
+    volumen:
+      min: 250
+      max: 550
+
+# Configuración de detección de anomalías
+anomaly_detection:
+  probability: 0.3
+  window_size: 24  # Tamaño de ventana para detección (horas)
+  sensitivity: 0.8  # Sensibilidad de detección (0-1)
+
+# Configuración de visualización
+visualization:
+  update_interval: 5  # Intervalo de actualización en segundos
+  chart_colors:
+    normal: "#4CAF50"
+    anomaly: "#F44336"
+    background: "#121212"
+    text: "#F0F0F0" 
