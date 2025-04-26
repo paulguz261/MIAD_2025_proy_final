@@ -111,9 +111,9 @@
         <div class="section">
             <h2>Seleccionar Cliente</h2>
             <select id="clientSelect" onchange="updateDashboard()">
-                <option value="clienteA">Cliente A</option>
-                <option value="clienteB">Cliente B</option>
-                <option value="clienteC">Cliente C</option>
+                {% for key, value in clientes.items() %}
+                    <option value="{{ key }}">{{ key }}</option>
+                {% endfor %}
             </select>
         </div>
 
@@ -134,6 +134,9 @@
 
         <div class="section card">
             <h2>Gráficos de Variables</h2>
+            <div class="chart-container">
+                {{ grafico_html|safe }}
+            </div>
             <div class="chart-container">
                 <canvas id="graficoPresion"></canvas>
             </div>
