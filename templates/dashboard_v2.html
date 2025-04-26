@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Contugas</title>
+    <!-- Add Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add Chart.js Annotation plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #f0f0f0;
+        }
+        header {
+            background-color: #1e1e1e;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        nav a {
+            color: #f0f0f0;
+            margin: 0 1rem;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        nav a:hover {
+            color: #4fc3f7;
+        }
+        .container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            margin-bottom: 2rem;
+        }
+        .card {
+            background-color: #1e1e1e;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
+        }
+        h2 {
+            color: #4fc3f7;
+            margin-top: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: #2a2a2a;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1.5rem 0;
+            padding-bottom: 2.5rem; /* Add space for legends and info */
+        }
+        select {
+            padding: 0.5rem;
+            background-color: #2a2a2a;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .status-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status-warning {
+            background-color: rgba(255, 165, 0, 0.2);
+            color: orange;
+        }
+        .status-normal {
+            background-color: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .limits-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #aaa;
+            position: absolute;
+            bottom: 2rem;
+            left: 0;
+            right: 0;
+        }
+        .limit-value {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .anomaly-legend {
+            display: flex;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        .anomaly-legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 1rem;
+        }
+        .anomaly-legend-color {
+            width: 15px;
+            height: 15px;
+            margin-right: 0.5rem;
+            border-radius: 3px;
+        }
+        .normal-zone {
+            background-color: rgba(0, 255, 0, 0.1);
+        }
+        .anomaly-zone {
+            background-color: rgba(255, 0, 0, 0.1);
+        }
+        .chart-title {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Contugas Dashboard</h1>
+        <nav>
+            <a href="#dashboard">Dashboard</a>
+            <a href="#clientes">Clientes</a>
+            <a href="#anomalías">Anomalías</a>
+            <a href="#reportes">Reportes</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="section">
+            <h2>Seleccionar Cliente</h2>
+            <select id="clientSelect" onchange="updateDashboard()">
+                <option value="clienteA">Cliente A</option>
+                <option value="clienteB">Cliente B</option>
+                <option value="clienteC">Cliente C</option>
+            </select>
+        </div>
+
+        <div class="grid-container">
+            <div class="card">
+                <h2>Resumen del Cliente</h2>
+                <p>Ubicación: <span id="ubicacionCliente">Ica</span></p>
+                <p>Consumo promedio: <span id="consumoPromedio">350</span> m³/h</p>
+                <p>Estado: <span id="estadoCliente" class="status-indicator status-warning">⚠️ Alerta</span></p>
+            </div>
+            <div class="card">
+                <h2>Métricas Principales</h2>
+                <p>Presión actual: <span id="presionActual">2.5</span> bar</p>
+                <p>Temperatura: <span id="temperaturaActual">25</span>°C</p>
+                <p>Volumen: <span id="volumenActual">350</span> m³</p>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2>Gráficos de Variables</h2>
+            <div class="chart-container">
+                <div class="chart-title">Presión (bar)</div>
+                <canvas id="graficoPresion"></canvas>
+                <div class="limits-info">
+                    <span>Límite inferior: <span id="presionLimiteInferior" class="limit-value">1.5 bar</span></span>
+                    <span>Límite superior: <span id="presionLimiteSuperior" class="limit-value">3.5 bar</span></span>
+                </div>
+                <div class="anomaly-legend">
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color normal-zone"></div>
+                        <span>Zona Normal</span>
+                    </div>
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color anomaly-zone"></div>
+                        <span>Zona de Anomalía</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Temperatura (°C)</div>
+                <canvas id="graficoTemperatura"></canvas>
+                <div class="limits-info">
+                    <span>Límite inferior: <span id="temperaturaLimiteInferior" class="limit-value">15°C</span></span>
+                    <span>Límite superior: <span id="temperaturaLimiteSuperior" class="limit-value">30°C</span></span>
+                </div>
+                <div class="anomaly-legend">
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color normal-zone"></div>
+                        <span>Zona Normal</span>
+                    </div>
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color anomaly-zone"></div>
+                        <span>Zona de Anomalía</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Volumen (m³)</div>
+                <canvas id="graficoVolumen"></canvas>
+                <div class="limits-info">
+                    <span>Límite inferior: <span id="volumenLimiteInferior" class="limit-value">200 m³</span></span>
+                    <span>Límite superior: <span id="volumenLimiteSuperior" class="limit-value">500 m³</span></span>
+                </div>
+                <div class="anomaly-legend">
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color normal-zone"></div>
+                        <span>Zona Normal</span>
+                    </div>
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color anomaly-zone"></div>
+                        <span>Zona de Anomalía</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2>Tabla de Anomalías</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Variable</th>
+                        <th>Tipo de Anomalía</th>
+                        <th>Criticidad</th>
+                    </tr>
+                </thead>
+                <tbody id="anomaliasTable">
+                    <tr>
+                        <td>2025-04-01</td>
+                        <td>Presión</td>
+                        <td>Valor fuera de rango</td>
+                        <td>Alta</td>
+                    </tr>
+                    <tr>
+                        <td>2025-04-03</td>
+                        <td>Temperatura</td>
+                        <td>Cambio abrupto</td>
+                        <td>Media</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de límites por cliente
+        const clientLimits = {
+            clienteA: {
+                ubicacion: "Ica",
+                presion: { min: 1.5, max: 3.5 },
+                temperatura: { min: 15, max: 30 },
+                volumen: { min: 200, max: 500 }
+            },
+            clienteB: {
+                ubicacion: "Chincha",
+                presion: { min: 1.5, max: 3.5 },
+                temperatura: { min: 15, max: 30 },
+                volumen: { min: 300, max: 600 }
+            },
+            clienteC: {
+                ubicacion: "Pisco",
+                presion: { min: 1.5, max: 3.5 },
+                temperatura: { min: 15, max: 30 },
+                volumen: { min: 250, max: 550 }
+            }
+        };
+
+        // Función para generar datos aleatorios para los gráficos
+        function generateData() {
+            const data = [];
+            const now = new Date();
+            for (let i = 0; i < 24; i++) {
+                const time = new Date(now);
+                time.setHours(time.getHours() - (23 - i));
+                data.push({
+                    time: time.toLocaleTimeString(),
+                    value: Math.random() * 100
+                });
+            }
+            return data;
+        }
+
+        // Función para crear una línea de límite
+        function createLimitLine(value, label, color) {
+            return {
+                type: 'line',
+                yMin: value,
+                yMax: value,
+                borderColor: color,
+                borderWidth: 2,
+                borderDash: [5, 5],
+                label: {
+                    content: label,
+                    enabled: true,
+                    position: 'end'
+                }
+            };
+        }
+
+        // Función para crear una zona sombreada
+        function createShadedArea(minValue, maxValue, color) {
+            return {
+                type: 'box',
+                yMin: minValue,
+                yMax: maxValue,
+                backgroundColor: color,
+                borderWidth: 0,
+                drawTime: 'beforeDatasetsDraw'
+            };
+        }
+
+        // Configuración común para los gráficos
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#f0f0f0'
+                    }
+                },
+                annotation: {
+                    annotations: {}
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: '#333'
+                    },
+                    ticks: {
+                        color: '#f0f0f0'
+                    }
+                },
+                y: {
+                    grid: {
+                        color: '#333'
+                    },
+                    ticks: {
+                        color: '#f0f0f0'
+                    }
+                }
+            }
+        };
+
+        // Crear gráficos
+        const presionChart = new Chart(
+            document.getElementById('graficoPresion'),
+            {
+                type: 'line',
+                data: {
+                    labels: generateData().map(d => d.time),
+                    datasets: [{
+                        label: 'Presión (bar)',
+                        data: generateData().map(d => d.value * 0.05 + 1.5), // Scale to pressure range
+                        borderColor: '#4fc3f7',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        ...commonOptions.scales,
+                        y: {
+                            ...commonOptions.scales.y,
+                            min: 0,
+                            max: 5,
+                            title: {
+                                display: true,
+                                text: 'Presión (bar)',
+                                color: '#f0f0f0'
+                            }
+                        }
+                    },
+                    plugins: {
+                        ...commonOptions.plugins,
+                        annotation: {
+                            annotations: {
+                                normalZone: createShadedArea(1.5, 3.5, 'rgba(0, 255, 0, 0.1)'),
+                                lowerAnomalyZone: createShadedArea(-Infinity, 1.5, 'rgba(255, 0, 0, 0.1)'),
+                                upperAnomalyZone: createShadedArea(3.5, Infinity, 'rgba(255, 0, 0, 0.1)')
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        const temperaturaChart = new Chart(
+            document.getElementById('graficoTemperatura'),
+            {
+                type: 'line',
+                data: {
+                    labels: generateData().map(d => d.time),
+                    datasets: [{
+                        label: 'Temperatura (°C)',
+                        data: generateData().map(d => d.value * 0.2 + 15), // Scale to temperature range
+                        borderColor: '#ff9800',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        ...commonOptions.scales,
+                        y: {
+                            ...commonOptions.scales.y,
+                            min: 10,
+                            max: 35,
+                            title: {
+                                display: true,
+                                text: 'Temperatura (°C)',
+                                color: '#f0f0f0'
+                            }
+                        }
+                    },
+                    plugins: {
+                        ...commonOptions.plugins,
+                        annotation: {
+                            annotations: {
+                                normalZone: createShadedArea(15, 30, 'rgba(0, 255, 0, 0.1)'),
+                                lowerAnomalyZone: createShadedArea(-Infinity, 15, 'rgba(255, 0, 0, 0.1)'),
+                                upperAnomalyZone: createShadedArea(30, Infinity, 'rgba(255, 0, 0, 0.1)')
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        const volumenChart = new Chart(
+            document.getElementById('graficoVolumen'),
+            {
+                type: 'line',
+                data: {
+                    labels: generateData().map(d => d.time),
+                    datasets: [{
+                        label: 'Volumen (m³)',
+                        data: generateData().map(d => d.value * 5 + 200), // Scale to volume range
+                        borderColor: '#4caf50',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        ...commonOptions.scales,
+                        y: {
+                            ...commonOptions.scales.y,
+                            min: 0,
+                            max: 700,
+                            title: {
+                                display: true,
+                                text: 'Volumen (m³)',
+                                color: '#f0f0f0'
+                            }
+                        }
+                    },
+                    plugins: {
+                        ...commonOptions.plugins,
+                        annotation: {
+                            annotations: {
+                                normalZone: createShadedArea(200, 500, 'rgba(0, 255, 0, 0.1)'),
+                                lowerAnomalyZone: createShadedArea(-Infinity, 200, 'rgba(255, 0, 0, 0.1)'),
+                                upperAnomalyZone: createShadedArea(500, Infinity, 'rgba(255, 0, 0, 0.1)')
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // Función para actualizar los límites en los gráficos
+        function updateChartLimits(chart, minValue, maxValue, minLabel, maxLabel) {
+            chart.options.plugins.annotation = {
+                annotations: {
+                    minLine: createLimitLine(minValue, minLabel, 'rgba(255, 0, 0, 0.5)'),
+                    maxLine: createLimitLine(maxValue, maxLabel, 'rgba(255, 0, 0, 0.5)'),
+                    normalZone: createShadedArea(minValue, maxValue, 'rgba(0, 255, 0, 0.1)'),
+                    lowerAnomalyZone: createShadedArea(-Infinity, minValue, 'rgba(255, 0, 0, 0.1)'),
+                    upperAnomalyZone: createShadedArea(maxValue, Infinity, 'rgba(255, 0, 0, 0.1)')
+                }
+            };
+            chart.update();
+        }
+
+        // Función para generar datos con anomalías
+        function generateDataWithAnomalies(limits, anomalyProbability = 0.3) {
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 0; i < 24; i++) {
+                const time = new Date(now);
+                time.setHours(time.getHours() - (23 - i));
+                
+                // Decidir si este punto será una anomalía
+                const isAnomaly = Math.random() < anomalyProbability;
+                
+                let value;
+                if (isAnomaly) {
+                    // Generar un valor fuera de los límites
+                    if (Math.random() < 0.5) {
+                        // Anomalía por debajo del límite
+                        value = limits.min - (Math.random() * (limits.max - limits.min) * 0.5);
+                    } else {
+                        // Anomalía por encima del límite
+                        value = limits.max + (Math.random() * (limits.max - limits.min) * 0.5);
+                    }
+                } else {
+                    // Valor normal dentro de los límites
+                    value = Math.random() * (limits.max - limits.min) + limits.min;
+                }
+                
+                data.push({
+                    time: time.toLocaleTimeString(),
+                    value: parseFloat(value.toFixed(1))
+                });
+            }
+            
+            return data;
+        }
+
+        // Función para actualizar el dashboard
+        function updateDashboard() {
+            const cliente = document.getElementById('clientSelect').value;
+            const limits = clientLimits[cliente];
+            
+            // Actualizar ubicación
+            document.getElementById('ubicacionCliente').textContent = limits.ubicacion;
+            
+            // Actualizar métricas
+            document.getElementById('consumoPromedio').textContent = 
+                Math.floor(Math.random() * 200 + 300);
+            
+            // Generar valores realistas basados en los límites
+            const presionValue = (Math.random() * (limits.presion.max - limits.presion.min) + limits.presion.min).toFixed(1);
+            const temperaturaValue = Math.floor(Math.random() * (limits.temperatura.max - limits.temperatura.min) + limits.temperatura.min);
+            const volumenValue = Math.floor(Math.random() * (limits.volumen.max - limits.volumen.min) + limits.volumen.min);
+            
+            document.getElementById('presionActual').textContent = presionValue;
+            document.getElementById('temperaturaActual').textContent = temperaturaValue;
+            document.getElementById('volumenActual').textContent = volumenValue;
+            
+            // Actualizar límites mostrados
+            document.getElementById('presionLimiteInferior').textContent = `${limits.presion.min} bar`;
+            document.getElementById('presionLimiteSuperior').textContent = `${limits.presion.max} bar`;
+            document.getElementById('temperaturaLimiteInferior').textContent = `${limits.temperatura.min}°C`;
+            document.getElementById('temperaturaLimiteSuperior').textContent = `${limits.temperatura.max}°C`;
+            document.getElementById('volumenLimiteInferior').textContent = `${limits.volumen.min} m³`;
+            document.getElementById('volumenLimiteSuperior').textContent = `${limits.volumen.max} m³`;
+
+            // Actualizar estado
+            const estadoElement = document.getElementById('estadoCliente');
+            const isAnomaly = Math.random() > 0.7;
+            if (isAnomaly) {
+                estadoElement.className = 'status-indicator status-warning';
+                estadoElement.textContent = '⚠️ Alerta';
+            } else {
+                estadoElement.className = 'status-indicator status-normal';
+                estadoElement.textContent = '✓ Normal';
+            }
+
+            // Generar datos con anomalías
+            const presionData = generateDataWithAnomalies(limits.presion, 0.3);
+            const temperaturaData = generateDataWithAnomalies(limits.temperatura, 0.3);
+            const volumenData = generateDataWithAnomalies(limits.volumen, 0.3);
+            
+            // Actualizar gráficos con datos que incluyen anomalías
+            presionChart.data.labels = presionData.map(d => d.time);
+            presionChart.data.datasets[0].data = presionData.map(d => d.value);
+            
+            temperaturaChart.data.labels = temperaturaData.map(d => d.time);
+            temperaturaChart.data.datasets[0].data = temperaturaData.map(d => d.value);
+            
+            volumenChart.data.labels = volumenData.map(d => d.time);
+            volumenChart.data.datasets[0].data = volumenData.map(d => d.value);
+            
+            // Actualizar límites en los gráficos
+            updateChartLimits(
+                presionChart, 
+                limits.presion.min, 
+                limits.presion.max, 
+                `Mín: ${limits.presion.min} bar`, 
+                `Máx: ${limits.presion.max} bar`
+            );
+            
+            updateChartLimits(
+                temperaturaChart, 
+                limits.temperatura.min, 
+                limits.temperatura.max, 
+                `Mín: ${limits.temperatura.min}°C`, 
+                `Máx: ${limits.temperatura.max}°C`
+            );
+            
+            updateChartLimits(
+                volumenChart, 
+                limits.volumen.min, 
+                limits.volumen.max, 
+                `Mín: ${limits.volumen.min} m³`, 
+                `Máx: ${limits.volumen.max} m³`
+            );
+            
+            // Actualizar gráficos
+            presionChart.update();
+            temperaturaChart.update();
+            volumenChart.update();
+            
+            // Actualizar tabla de anomalías
+            updateAnomaliesTable(presionData, temperaturaData, volumenData, limits);
+        }
+        
+        // Función para actualizar la tabla de anomalías
+        function updateAnomaliesTable(presionData, temperaturaData, volumenData, limits) {
+            const anomaliasTable = document.getElementById('anomaliasTable');
+            anomaliasTable.innerHTML = '';
+            
+            // Encontrar anomalías en los datos
+            const anomalias = [];
+            
+            // Verificar anomalías de presión
+            presionData.forEach((data, index) => {
+                if (data.value < limits.presion.min || data.value > limits.presion.max) {
+                    anomalias.push({
+                        fecha: data.time,
+                        variable: 'Presión',
+                        tipo: data.value < limits.presion.min ? 'Valor bajo' : 'Valor alto',
+                        criticidad: Math.abs(data.value - (data.value < limits.presion.min ? limits.presion.min : limits.presion.max)) > 1 ? 'Alta' : 'Media'
+                    });
+                }
+            });
+            
+            // Verificar anomalías de temperatura
+            temperaturaData.forEach((data, index) => {
+                if (data.value < limits.temperatura.min || data.value > limits.temperatura.max) {
+                    anomalias.push({
+                        fecha: data.time,
+                        variable: 'Temperatura',
+                        tipo: data.value < limits.temperatura.min ? 'Valor bajo' : 'Valor alto',
+                        criticidad: Math.abs(data.value - (data.value < limits.temperatura.min ? limits.temperatura.min : limits.temperatura.max)) > 5 ? 'Alta' : 'Media'
+                    });
+                }
+            });
+            
+            // Verificar anomalías de volumen
+            volumenData.forEach((data, index) => {
+                if (data.value < limits.volumen.min || data.value > limits.volumen.max) {
+                    anomalias.push({
+                        fecha: data.time,
+                        variable: 'Volumen',
+                        tipo: data.value < limits.volumen.min ? 'Valor bajo' : 'Valor alto',
+                        criticidad: Math.abs(data.value - (data.value < limits.volumen.min ? limits.volumen.min : limits.volumen.max)) > 100 ? 'Alta' : 'Media'
+                    });
+                }
+            });
+            
+            // Ordenar anomalías por fecha (más recientes primero)
+            anomalias.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            
+            // Limitar a las 5 anomalías más recientes
+            const recentAnomalies = anomalias.slice(0, 5);
+            
+            // Agregar anomalías a la tabla
+            recentAnomalies.forEach(anomalia => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${anomalia.fecha}</td>
+                    <td>${anomalia.variable}</td>
+                    <td>${anomalia.tipo}</td>
+                    <td>${anomalia.criticidad}</td>
+                `;
+                anomaliasTable.appendChild(row);
+            });
+            
+            // Si no hay anomalías, mostrar un mensaje
+            if (recentAnomalies.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="4" style="text-align: center;">No se detectaron anomalías en el período</td>
+                `;
+                anomaliasTable.appendChild(row);
+            }
+        }
+
+        // Actualizar datos cada 5 segundos
+        setInterval(updateDashboard, 5000);
+        
+        // Inicializar el dashboard
+        updateDashboard();
+    </script>
+</body>
+</html> 
