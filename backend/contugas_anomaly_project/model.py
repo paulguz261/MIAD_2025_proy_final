@@ -72,6 +72,3 @@ def predict_with_pipeline(pipeline, df_client):
     df['nivel_anomalia_iforest'] = df['anomaly_score'].apply(clasificar_severidad)
     
     return df
-
-
-train_all_clients()
