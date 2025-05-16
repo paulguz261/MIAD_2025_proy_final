@@ -1,0 +1,227 @@
+
+/* ===== ESTILO CONTUGAS ACTUALIZADO ===== */
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    background-color: #f4f4f4; /* fondo gris suave para todo el body */
+    color: #222;
+}
+
+header {
+    background-color: #2db84d;
+    color: white;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #00753a;
+}
+
+nav a {
+    color: white;
+    margin: 0 1rem;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+.container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #f9f9f9; /* mantiene el fondo interior un poco más claro */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1); /* bordes más visibles */
+}
+
+.section {
+    margin-bottom: 2rem;
+}
+
+.card {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #ccc; /* borde más visible */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+h2 {
+    color: #2db84d;
+    margin-top: 0;
+}
+
+select, input[type="date"] {
+    padding: 0.5rem;
+    background-color: #ffffff;
+    color: #222;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 1rem;
+    width: 200px;
+}
+
+button {
+    background-color: #2db84d;
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #23993e;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background-color: #ffffff;
+    font-size: 0.95rem;
+}
+
+th {
+    background-color: #2db84d;
+    color: white;
+    padding: 0.75rem;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+td {
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.scrollable-table {
+    max-height: 300px;
+    overflow-y: auto;
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.anomalia-alta {
+    background-color: rgba(255, 0, 0, 0.08);
+    color: #d50000;
+    font-weight: bold;
+}
+
+.anomalia-media {
+    background-color: rgba(255, 165, 0, 0.08);
+    color: #ff6f00;
+    font-weight: bold;
+}
+
+.anomalia-leve {
+    background-color: rgba(255, 255, 0, 0.05);
+    color: #fbc02d;
+    font-weight: bold;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin: 1.5rem 0;
+    padding-bottom: 4rem;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.chart-title {
+    font-size: 1.1rem;
+    color: #2db84d;
+    margin-bottom: 0.5rem;
+    padding-left: 1rem;
+}
+
+.status-indicator {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.status-warning {
+    background-color: rgba(255, 165, 0, 0.1);
+    color: #ff9800;
+}
+
+.status-normal {
+    background-color: rgba(0, 200, 0, 0.1);
+    color: #2e7d32;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.limits-info, .anomaly-legend {
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: 0.5rem;
+    padding: 0 1rem;
+}
+
+.anomaly-legend-item {
+    display: flex;
+    align-items: center;
+    margin-right: 1rem;
+}
+
+.anomaly-legend-color {
+    width: 15px;
+    height: 15px;
+    margin-right: 0.5rem;
+    border-radius: 3px;
+}
+
+.normal-zone {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.anomaly-zone {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+.limit-value {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.05);
+    font-weight: bold;
+}
+
+.status-card {
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  border-left: 6px solid #2db84d;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.estado-linea {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}

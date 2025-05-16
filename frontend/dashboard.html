@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Contugas</title>
+    <!-- Add Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+
+    <!-- Add Chart.js Annotation plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <header>
+        <h1>Contugas Dashboard</h1>
+        <nav>
+            <a href="#dashboard">Dashboard</a>
+            <a href="#clientes">Clientes</a>
+            <a href="#anomalías">Anomalías</a>
+            <a href="#reportes">Reportes</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="section">
+            <!-- Filtros de Cliente -->
+            <h2>Seleccionar Cliente</h2>
+            <select id="clientSelect">
+
+            </select>
+
+            <!-- Filtros de fecha -->
+            <div style="margin-top: 1rem;">
+                <label for="startDate">Desde:</label>
+                <input type="datetime-local" id="startDate">
+
+                <label for="endDate">Hasta:</label>
+                <input type="datetime-local" id="endDate">
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="card status-card">
+                <h2>Estado del Cliente</h2>
+                <div class="estado-linea">
+                    <span id="estadoCliente" class="status-indicator">-</span>
+                </div>
+                <div class="metricas-grid">
+                    <div>
+                    <strong>Presión:</strong> <span id="presionActual">-</span> bar<br>
+                    <small>Promedio: <span id="promedioPresion">-</span> bar</small>
+                    </div>
+                    <div>
+                    <strong>Temperatura:</strong> <span id="temperaturaActual">-</span> °C<br>
+                    <small>Promedio: <span id="promedioTemperatura">-</span> °C</small>
+                    </div>
+                    <div>
+                    <strong>Volumen:</strong> <span id="volumenActual">-</span> m³<br>
+                    <small>Promedio: <span id="promedioVolumen">-</span> m³</small>
+                    </div>
+                    <div>
+                    <strong>Anomalías:</strong> <span id="cantidadAnomalias">0</span><br>
+                    <small>Span de tiempo</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+    <button onclick="resetZoomTodos()">Resetear Zoom</button>
+            <h2>Gráficos de Variables</h2>
+            <div class="chart-container">
+                <div class="chart-title">Presión (bar)</div>
+                <canvas id="graficoPresion"></canvas>
+                <div class="limits-info">
+                    <span>Límite inferior: <span id="presionLimiteInferior" class="limit-value">1.5 bar</span></span>
+                    <span>Límite superior: <span id="presionLimiteSuperior" class="limit-value">3.5 bar</span></span>
+                </div>
+                <div class="anomaly-legend">
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color normal-zone"></div>
+                        <span>Zona Normal</span>
+                    </div>
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color anomaly-zone"></div>
+                        <span>Zona de Anomalía</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Temperatura (°C)</div>
+                <canvas id="graficoTemperatura"></canvas>
+                <div class="limits-info">
+                    <span>Límite inferior: <span id="temperaturaLimiteInferior" class="limit-value">15°C</span></span>
+                    <span>Límite superior: <span id="temperaturaLimiteSuperior" class="limit-value">30°C</span></span>
+                </div>
+                <div class="anomaly-legend">
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color normal-zone"></div>
+                        <span>Zona Normal</span>
+                    </div>
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color anomaly-zone"></div>
+                        <span>Zona de Anomalía</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Volumen (m³)</div>
+                <canvas id="graficoVolumen"></canvas>
+                <div class="limits-info">
+                    <span>Límite inferior: <span id="volumenLimiteInferior" class="limit-value">200 m³</span></span>
+                    <span>Límite superior: <span id="volumenLimiteSuperior" class="limit-value">500 m³</span></span>
+                </div>
+                <div class="anomaly-legend">
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color normal-zone"></div>
+                        <span>Zona Normal</span>
+                    </div>
+                    <div class="anomaly-legend-item">
+                        <div class="anomaly-legend-color anomaly-zone"></div>
+                        <span>Zona de Anomalía</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+    <button onclick="resetZoomTodos()">Resetear Zoom</button>
+            <h2>Tabla de Anomalías</h2>
+            <div class="scrollable-table">
+            <table id="anomaliasTable">
+                <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Presión</th>
+                    <th>Temperatura</th>
+                    <th>Volumen</th>
+                    <th>Criticidad</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            </div>
+        </div>
+
+        <div class="section card">
+    <button onclick="resetZoomTodos()">Resetear Zoom</button>
+            <h2>Alertas y Notificaciones</h2>
+            <p id="alertas">No hay alertas activas.</p>
+        </div>
+
+        <div class="section card">
+    <button onclick="resetZoomTodos()">Resetear Zoom</button>
+            <h2>Reportes Generados</h2>
+            <ul id="reportesGenerados">
+                <li>No hay reportes generados.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+
+</body>
+</html> 
