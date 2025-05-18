@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráfico de Dispersión con Múltiples Series</title>
+</head>
+<body>
+    <div id="scatter-multiple" style="width:100%; height:500px;"></div>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        var data = [{
+            x: [1, 2, 3, 4, 5],
+            y: [10, 11, 12, 13, 14],
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Serie 1'
+        }, {
+            x: [1, 2, 3, 4, 5],
+            y: [15, 16, 17, 18, 19],
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Serie 2'
+        }];
+        
+        var layout = {
+            title: 'Gráfico de Dispersión con Múltiples Series',
+            xaxis: { title: 'X' },
+            yaxis: { title: 'Y' }
+        };
+
+        Plotly.newPlot('scatter-multiple', data, layout);
+    </script>
+</body>
+</html>

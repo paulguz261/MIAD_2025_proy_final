@@ -1,6 +1,25 @@
 import pandas as pd
 import numpy as np
-from contugas_anomaly_project import config as cnf
+import os
+import sys
+# Agrega el directorio actual al sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import config as cnf
+
+def save_in_parquet_files():
+    df = cargar_datos(cnf.DIR_PROCESSED_FILE)
+    for i in range(1, 21):
+        print("entra")
+        cliente = f"CLIENTE{i}"
+        df_cliente = df[df["cliente"] == cliente]
+        df_cliente["is_anomaly"] = np.random.rand(len(df_cliente))
+        # Eliminar la columna 'cliente'
+        df_cliente = df_cliente.drop(columns=["cliente"])
+        print(df_cliente.head())
+        
+        #file_client_parquet_path = os.path.join(cnf.DIR_PARQUET_PYSPARK_FILE, f"{cliente}_data_consumo.parquet")
+        #df_cliente.to_parquet(file_client_parquet_path, index=False)
+
 
 def cargar_datos(file_path):
     """Cargar datos de csv"""

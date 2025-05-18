@@ -7,13 +7,13 @@ import sys
 import pandas as pd
 import joblib
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import contugas_anomaly_project.preprocess as pre
-import contugas_anomaly_project.config as cnf
-import contugas_anomaly_project.model as mdl
+from contugas_anomaly_project import config as cnf
+from contugas_anomaly_project import model2604
+from contugas_anomaly_project import preprocess as pre
+from contugas_anomaly_project import model as mdl
 from data.clientes import get_all_clientes
 from datetime import datetime
-import plotly.graph_objs as go
-import plotly.io as pio
+import json
  
 # Obtener la ruta absoluta a la carpeta 'templates' fuera de 'backend/api'
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../templates'))
@@ -79,7 +79,7 @@ def predict():
     
     #return jsonify({"resultados":df_result[["Fecha", "Presion", "Temperatura", "Volumen", "anomaly_label"]].to_dict(orient="records")})
     clientes = get_all_clientes()
-    return render_template("dashboard_v1.html", clientes=clientes, grafico_html=grafico(df_result))
+    return render_template("dashboard_v1.html", clientes=clientes)
 
 @app.route("/", methods=["GET"])
 def index():
@@ -88,27 +88,86 @@ def index():
 @app.route("/v1", methods=["GET"])
 def indexV1():
     clientes = get_all_clientes()
-    return render_template("dashboard_v1.html", clientes=clientes, grafico_html=grafico())
+    return render_template("dashboard_v1.html", clientes=clientes)
 
 @app.route("/v2", methods=["GET"])
 def indexV2():
     return render_template("dashboard_v2.html")
 
-def grafico(data):
-  
-    # Crear la figura con varias líneas
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['Fecha'], y=data['Presion'], mode='lines+markers', name='Presión'))
-    fig.add_trace(go.Scatter(x=data['Fecha'], y=data['Temperatura'], mode='lines+markers', name='Temperatura'))
-    fig.add_trace(go.Scatter(x=data['Fecha'], y=data['Volumen'], mode='lines+markers', name='Volumen'))
-
-    fig.update_layout(title="Presión, Temperatura y Volumen a lo largo del tiempo",
-                      xaxis_title="Fecha",
-                      yaxis_title="Valor",
-                      legend_title="Variables")
-
-    # Convertir el gráfico a HTML
-    return pio.to_html(fig, full_html=False)
+@app.route("/v3", methods=["GET"])
+def indexV3():
+    clientes = get_all_clientes()
+    return render_template("dashboard_v1.html", clientes=clientes, grafico_html=model2604.proccessData())
     
+@app.route("/scatter", methods=["GET"])
+def indexScatter():
+    return render_template("scatter.html")
+
+@app.route("/api/save-data", methods=['GET'])
+def sava_data():
+    model_path = os.path.join(cnf.DIR_PARQUET_PYSPARK_FILE, "data_prueba.parquet")
+    df = pd.DataFrame({
+    'nombre': ['Ana', 'Luis', 'Carlos'],
+    'edad': [25, 30, 35]
+    })
+
+    # Guardar como archivo Parquet
+    df.to_parquet(model_path, engine='pyarrow', index=False)
+    
+    return jsonify({"response":"saved"})
+
+@app.route("/api/get-data", methods=['GET'])
+def get_parquet_data():
+    model_path = os.path.join(cnf.DIR_PARQUET_PYSPARK_FILE, "data_prueba.parquet")
+    df = pd.read_parquet(model_path, engine='pyarrow')
+    data = df.to_dict(orient="records")
+
+    # Envolver en un diccionario (por ejemplo, para enviar como respuesta API)
+    response = {"response": data}
+
+    # Convertir a JSON final
+    json_str = json.dumps(response)
+
+    return json_str
+
+
+@app.route("/api/update-data", methods=['GET'])
+def update_parquet_data():
+    model_path = os.path.join(cnf.DIR_PARQUET_PYSPARK_FILE, "data_prueba.parquet")
+    df = pd.read_parquet(model_path, engine='pyarrow')
+
+    # 2. Crear el nuevo registro (como diccionario)
+    nuevo_registro = {
+        "nombre": "María",
+        "edad": 28
+    }
+
+    # 3. Agregarlo al DataFrame
+    df = pd.concat([df, pd.DataFrame([nuevo_registro])], ignore_index=True)
+
+    # 4. Guardar el DataFrame actualizado nuevamente en Parquet
+    df.to_parquet(model_path, index=False)
+    return jsonify({"response":"updated"})
+
+
+@app.route("/api-save-client/client-data", methods=['GET'])
+def get_client_data_v222():
+    cliente = request.args.get('cliente')
+    df = pre.cargar_datos(cnf.DIR_PROCESSED_FILE)
+    # Filter by client
+    df_cliente = df[df["cliente"] == cliente]
+    print(df_cliente.head())
+    
+    file_client_parquet_path = os.path.join(cnf.DIR_PARQUET_PYSPARK_FILE, f"{cliente}_data_consumo.parquet")
+    # 4. Guardar el DataFrame actualizado nuevamente en Parquet
+    df_cliente.to_parquet(file_client_parquet_path, index=False)
+    
+    return jsonify({"response":"save  data client"})
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+    pre.save_in_parquet_files()
+    
+    
+    
