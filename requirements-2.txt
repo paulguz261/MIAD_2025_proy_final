@@ -1,4 +1,4 @@
-sqlalchemy>=1.4
+sqlalchemy==1.4.49
 fastapi[all]
 # Web Framework
 Flask==2.0.2
