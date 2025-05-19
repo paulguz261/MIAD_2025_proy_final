@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 # Clona el repositorio directamente dentro del contenedor
 RUN git clone https://github.com/paulguz261/MIAD_2025_proy_final.git /app
 
-# Establece el directorio de trabajo
 WORKDIR /app
+RUN git checkout feature/ajuste-despliegue-productivo
 
 # Instala las dependencias
 RUN pip install --no-cache-dir -r requirements-2.txt
