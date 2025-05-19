@@ -1,7 +1,35 @@
 import pandas as pd
 import numpy as np
-from contugas_anomaly_project import config as cnf
 
+import os
+import sys
+# Agrega el directorio actual al sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import config as cnf
+
+def readDataExcel():
+    # Leer todas las hojas del archivo Excel
+    excel_data = pd.read_excel(cnf.DIR_RAW_FILE, sheet_name=None, engine='openpyxl')
+    for cliente, datos in excel_data.items():
+        df_cliente = datos.copy()
+        df_cliente["is_anomaly"] = np.random.rand(len(df_cliente))
+        file_client_parquet_path = cnf.DIR_PARQUET_PYSPARK_FILE.format(cliente.lower())
+        df_cliente.to_parquet(file_client_parquet_path, index=False)
+        #print(datos.head())  # Muestra las primeras 5 filas de cada hoja
+        #print("\n")
+        
+def readDataCliente(cliente):
+    data_cliente_filename = cnf.DIR_PARQUET_PYSPARK_FILE.format(cliente.lower())
+    df = pd.read_parquet(data_cliente_filename, engine='pyarrow')
+    data = df.to_dict(orient="records")
+    return data
+
+
+def getAllClientes():
+    return ["CLIENTE1", "CLIENTE2", "CLIENTE3", "CLIENTE4", "CLIENTE5", "CLIENTE6", "CLIENTE7", "CLIENTE8",
+            "CLIENTE9", "CLIENTE10", "CLIENTE11", "CLIENTE12", "CLIENTE13", "CLIENTE14", "CLIENTE15",
+            "CLIENTE16", "CLIENTE17", "CLIENTE18", "CLIENTE19", "CLIENTE20"]
+        
 def cargar_datos(file_path):
     """Cargar datos de csv"""
     df = pd.read_csv(file_path)

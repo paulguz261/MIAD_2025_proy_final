@@ -246,7 +246,7 @@ function actualizarTablaAnomalias(anomalias) {
     const tbody = tabla.querySelector("tbody");
     tbody.innerHTML = "";  // ✅ Limpia solo las filas
 
-
+    console.log(anomalias)
     // Agrupar anomalías por fecha
     const agrupadas = {};
 
@@ -283,13 +283,13 @@ function actualizarTablaAnomalias(anomalias) {
         tdFecha.textContent = r.fecha;
 
         const tdPresion = document.createElement("td");
-        tdPresion.textContent = r.presion !== null ? r.presion.toFixed(2) : "-";
+        tdPresion.textContent = r.presion !== null ? Number(r.presion).toFixed(2) : "-";
 
         const tdTemp = document.createElement("td");
-        tdTemp.textContent = r.temperatura !== null ? r.temperatura.toFixed(2) : "-";
+        tdTemp.textContent = r.temperatura !== null ? Number(r.temperatura).toFixed(2) : "-";
 
         const tdVol = document.createElement("td");
-        tdVol.textContent = r.volumen !== null ? r.volumen.toFixed(2) : "-";
+        tdVol.textContent = r.volumen !== null ? Number(r.volumen).toFixed(2) : "-";
 
         const tdCrit = document.createElement("td");
         const nivel = obtenerCriticidadMaxima(r.criticidades);
@@ -321,13 +321,14 @@ async function updateDashboard() {
     const endDate = document.getElementById('endDate').value;
     console.log("startDate:", startDate);
     console.log("endDate:", endDate);
-
-    const params = new URLSearchParams();
+    console.log("cliente:", cliente)
+    if(cliente !== ""){
+        const params = new URLSearchParams();
     if (startDate) params.append("start", startDate);
     if (endDate) params.append("end", endDate);
 
-    const url = `http://localhost:8000/api/mediciones/${cliente}?${params.toString()}`;
-    const anomaliasUrl = `http://localhost:8000/api/anomalias/${cliente}?${params.toString()}`;
+    const url = `http://localhost:5000/api/mediciones/${cliente}`;
+    const anomaliasUrl = `http://localhost:5000/api/anomalias/${cliente}`;
 
     try {
         const [response, resAnomalias] = await Promise.all([
@@ -338,10 +339,9 @@ async function updateDashboard() {
         if (!resAnomalias.ok) {
             console.warn("❌ Error al obtener anomalías:", resAnomalias.status);
         }
-
+        
         if (!response.ok) throw new Error("No se encontraron datos");
         const data = await response.json();
-
         // actualiza tabla de anomalias
         const anomalias = await resAnomalias.json();
         actualizarTablaAnomalias(anomalias);
@@ -352,10 +352,6 @@ async function updateDashboard() {
         const presionData = data.map(d => d.presion);
         const temperaturaData = data.map(d => d.temperatura);
         const volumenData = data.map(d => d.volumen);
-
-        document.getElementById('presionActual').textContent = presionData.at(-1).toFixed(2);
-        document.getElementById('temperaturaActual').textContent = temperaturaData.at(-1).toFixed(2);
-        document.getElementById('volumenActual').textContent = volumenData.at(-1).toFixed(2);
 
         const expand = (arr, margen) => {
             const min = Math.min(...arr);
@@ -409,6 +405,8 @@ async function updateDashboard() {
     } catch (error) {
         alert("Error al cargar datos: " + error.message);
     }
+    }
+    
 }
 
 
@@ -449,13 +447,13 @@ try {
 
 async function cargarClientes() {
     try {
-        const response = await fetch("http://localhost:8000/api/clientes");
+        const response = await fetch("http://localhost:5000/api/clientes");
         const clientes = await response.json();
 
         const select = document.getElementById("clientSelect");
         select.innerHTML = ""; // limpiar opciones anteriores
-
-        clientes.forEach(cliente => {
+        console.log(clientes)
+        clientes.clientes.forEach(cliente => {
             const option = document.createElement("option");
             option.value = cliente;
             option.textContent = cliente;
@@ -515,29 +513,29 @@ function sincronizarZoom(chartOrigen, chartsDestino) {
 }
 
 function actualizarTarjetaEstado(data, anomalias) {
+    console.log(anomalias)
     const presionData = data.map(d => d.presion);
     const temperaturaData = data.map(d => d.temperatura);
     const volumenData = data.map(d => d.volumen);
     const labels = data.map(d => new Date(d.fecha).toLocaleString());
 
     // Calcular promedios
-    const promedioPresion = (presionData.reduce((a, b) => a + b, 0) / presionData.length).toFixed(2);
-    const promedioTemperatura = (temperaturaData.reduce((a, b) => a + b, 0) / temperaturaData.length).toFixed(2);
-    const promedioVolumen = (volumenData.reduce((a, b) => a + b, 0) / volumenData.length).toFixed(2);
+    const promedioPresion = Number((presionData.reduce((a, b) => a + b, 0) / presionData.length)).toFixed(2);
+    const promedioTemperatura = Number((temperaturaData.reduce((a, b) => a + b, 0) / temperaturaData.length)).toFixed(2);
+    const promedioVolumen = Number((volumenData.reduce((a, b) => a + b, 0) / volumenData.length)).toFixed(2);
 
 
     // Mostrar promedios
     document.getElementById('promedioPresion').textContent = promedioPresion;
     document.getElementById('promedioTemperatura').textContent = promedioTemperatura;
     document.getElementById('promedioVolumen').textContent = promedioVolumen;
-
     // Últimos valores
-    document.getElementById('presionActual').textContent = presionData.at(-1).toFixed(2);
-    document.getElementById('temperaturaActual').textContent = temperaturaData.at(-1).toFixed(2);
-    document.getElementById('volumenActual').textContent = volumenData.at(-1).toFixed(2);
+    document.getElementById('presionActual').textContent = Number(presionData.at(-1)).toFixed(2);
+    document.getElementById('temperaturaActual').textContent = Number(temperaturaData.at(-1)).toFixed(2);
+    document.getElementById('volumenActual').textContent = Number(volumenData.at(-1)).toFixed(2);
 
     // Anomalías detectadas
-    document.getElementById('cantidadAnomalias').textContent = (anomalias.length / 3).toFixed(0);
+    document.getElementById('cantidadAnomalias').textContent = Number((anomalias.length / 3)).toFixed(0);
 
     // Estado del cliente (último punto)
     const ultimaFecha = labels.at(-1);
