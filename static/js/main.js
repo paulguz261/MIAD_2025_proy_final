@@ -1,3 +1,5 @@
+const host = window.location.origin;
+console.log("host: ", host)
 document.addEventListener("DOMContentLoaded", () => {
   cargarClientes();  // o el nombre de tu inicializador
 });
