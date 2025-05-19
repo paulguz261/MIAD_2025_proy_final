@@ -15,7 +15,7 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements-2.txt --verbose
 
 # Expone el puerto
-EXPOSE 8000
+EXPOSE 5000
 
 # Comando para ejecutar la app (ajusta según tu estructura)
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "backend.api.endpoints:app"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "backend.api.endpoints:app"]
