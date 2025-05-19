@@ -329,8 +329,8 @@ async function updateDashboard() {
     if (startDate) params.append("start", startDate);
     if (endDate) params.append("end", endDate);
 
-    const url = `http://localhost:5000/api/mediciones/${cliente}`;
-    const anomaliasUrl = `http://localhost:5000/api/anomalias/${cliente}`;
+    const url = `${host}/api/mediciones/${cliente}`;
+    const anomaliasUrl = `${host}/api/anomalias/${cliente}`;
 
     try {
         const [response, resAnomalias] = await Promise.all([
@@ -415,7 +415,7 @@ async function updateDashboard() {
 
 async function establecerFechasPorDefecto(cliente) {
 try {
-    const response = await fetch(`http://localhost:8000/api/clientes/${cliente}/rango-fechas`);
+    const response = await fetch(`${host}/api/clientes/${cliente}/rango-fechas`);
     const rango = await response.json();
 
     console.log("rango:", rango);
@@ -449,7 +449,7 @@ try {
 
 async function cargarClientes() {
     try {
-        const response = await fetch("http://localhost:5000/api/clientes");
+        const response = await fetch(`${host}/api/clientes`);
         const clientes = await response.json();
 
         const select = document.getElementById("clientSelect");
