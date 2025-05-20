@@ -84,4 +84,4 @@ if __name__ == '__main__':
     #pre.readDataExcel()
     #pre.processAnomalias()
     pre.saveDashboradClienteInCache()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
