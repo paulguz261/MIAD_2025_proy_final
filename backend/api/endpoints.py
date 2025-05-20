@@ -1,7 +1,7 @@
 # api/endpoints.py
 import sys
 import os
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, Response
 from flask_cors import CORS
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from fastapi import APIRouter, HTTPException, Query, Depends
@@ -74,44 +74,7 @@ def rango_fechas(cliente: str, db: Session = Depends(get_db)):
 def obtener_anomalias(
     cliente: str
 ):
-    data_cliente = pre.readDataCliente(cliente)
-    data_cliente = pd.DataFrame(data_cliente)
-    
-    # 2. Cargar modelo correspondiente
-
-    base_dir = Path(__file__).resolve().parent.parent
-    modelo_path = base_dir / "models" / f"{cliente}_pipeline.pkl"
-    if not modelo_path.exists():
-        raise HTTPException(status_code=404, detail=f"No se encontró el modelo para {cliente}")
-
-    modelo = joblib.load(modelo_path)
-    # Preprocesar datos
-    data_cliente = create_diff_variables(data_cliente)
-    print(data_cliente.head())
-    # df = df.dropna()
-    # 3. Aplicar el modelo
-    X = data_cliente[['Presion', 'Temperatura', 'Volumen','delta_volumen','delta_presion','delta_temperatura']]
-    X = X.dropna()
-    predicciones = modelo.predict_severity(X) 
-
-    data_cliente["criticidad"] = predicciones
-
-    # 4. Filtrar anomalías y formatear
-    anomalias = data_cliente[data_cliente["criticidad"] != "normal"]
-    print("🔍 Cantidad de anomalías:", len(anomalias))
-    # print(anomalias.head().to_dict())
-    print(anomalias.isna().sum())
-    anomalias = anomalias.fillna(value='normal')
-    resultado = []
-    for i, row in anomalias.iterrows():
-        for var in ["Presion", "Temperatura", "Volumen"]:
-            resultado.append({
-                "fecha": row["Fecha"],
-                "variable": var,
-                "valor": row[var],
-                "criticidad": row["criticidad"]
-            })
-    return jsonify(resultado)   
+    return Response(pre.getDashboardCliente(cliente), content_type="application/json")
 
 @app.route("/contugas/dashboard", methods=['GET'])
 def getDashboard():
@@ -119,4 +82,6 @@ def getDashboard():
 
 if __name__ == '__main__':
     #pre.readDataExcel()
+    #pre.processAnomalias()
+    pre.saveDashboradClienteInCache()
     app.run(debug=True)

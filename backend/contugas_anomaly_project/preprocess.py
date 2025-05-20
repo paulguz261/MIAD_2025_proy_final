@@ -1,11 +1,15 @@
 import pandas as pd
 import numpy as np
-
+import joblib
 import os
 import sys
 # Agrega el directorio actual al sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import config as cnf
+from services.preprocessing import create_diff_variables
+import orjson
+
+data_cache = {}
 
 def readDataExcel():
     # Leer todas las hojas del archivo Excel
@@ -30,6 +34,88 @@ def getAllClientes():
             "CLIENTE9", "CLIENTE10", "CLIENTE11", "CLIENTE12", "CLIENTE13", "CLIENTE14", "CLIENTE15",
             "CLIENTE16", "CLIENTE17", "CLIENTE18", "CLIENTE19", "CLIENTE20"]
         
+        
+        
+        
+        
+def processAnomalias():
+    for cliente in getAllClientes():
+        data_cliente = readDataCliente(cliente)
+        data_cliente = pd.DataFrame(data_cliente)
+        # 2. Cargar modelo correspondiente
+        modelo = joblib.load(cnf.DIR_MODELS_FILE.format(cliente.upper()))
+        # Preprocesar datos
+        data_cliente = create_diff_variables(data_cliente)
+        # df = df.dropna()
+        # 3. Aplicar el modelo
+        X = data_cliente[['Presion', 'Temperatura', 'Volumen','delta_volumen','delta_presion','delta_temperatura']]
+        X = X.dropna()
+        predicciones = modelo.predict_severity(X) 
+
+        data_cliente["criticidad"] = predicciones
+
+        # 4. Filtrar anomalías y formatear
+        print(data_cliente.head())
+        anomalias = data_cliente[data_cliente["criticidad"] != "normal"]
+        # print(anomalias.head().to_dict())
+        anomalias = anomalias.fillna(value='normal')
+        summary =  anomalias.drop(columns=["is_anomaly", "delta_volumen", "delta_presion", "delta_temperatura"])
+        #print(anomalias)
+        summary.to_parquet(cnf.DIR_PARQUET_CLIENT_PROCESSED_FILE.format(cliente.lower()), index=False)
+        resultado = []
+        for i, row in anomalias.iterrows():
+            for var in ["Presion", "Temperatura", "Volumen"]:
+                resultado.append({
+                    "fecha": row["Fecha"],
+                    "variable": var,
+                    "valor": row[var],
+                    "criticidad": row["criticidad"]
+                })
+        resultado = pd.DataFrame(resultado)
+        resultado.to_parquet(cnf.DIR_PARQUET_CLIENT_PREDICTION_FILE.format(cliente.lower()), index=False)
+
+def getAnomaliasCliente(cliente):
+    anomalias_data = cnf.DIR_PARQUET_CLIENT_PROCESSED_FILE.format(cliente.lower())
+    anomalias_splitted = cnf.DIR_PARQUET_CLIENT_PREDICTION_FILE.format(cliente.lower())
+    df = pd.read_parquet(anomalias_splitted, engine='pyarrow')
+    df_anomalias_data = pd.read_parquet(anomalias_data, engine='pyarrow')
+    #print(df.head())
+    df_anomalias_data = df_anomalias_data.sort_values(by="Fecha", ascending=False)
+    df_anomalias_data['Fecha'] = df_anomalias_data["Fecha"].dt.strftime("%d/%m/%Y %H:%M:%S")
+    
+    response = {}
+    response['data'] = df_anomalias_data.to_dict(orient="records")
+    response['presion'] = filterData(df, 'Presion')
+    response['volumen'] = filterData(df, 'Volumen')
+    response['temperatura'] = filterData(df, 'Temperatura')
+    return response         
+
+def filterData(data, variable):
+    df_filtered = data[data["variable"] == variable]
+    df_filtered['fecha'] = df_filtered["fecha"].dt.strftime("%d/%m/%Y %H:%M:%S")
+    response_temp =  {}
+    response_temp['data']=df_filtered.to_dict(orient="list")
+    response_temp['data_points'] = filterCriticidad(df_filtered)
+    response_temp['average'] = float(round(np.mean(response_temp['data']['valor']), 2))
+    return response_temp
+
+def filterCriticidad(data):
+    response = {}
+    for criticidad in getCriticidades():
+        dataByCriticidad = data[data["criticidad"] == criticidad]
+        response[criticidad] = [{"x": row["fecha"], "y": row["valor"]}
+            for _, row in dataByCriticidad.iterrows()
+        ]
+    return response
+
+def saveDashboradClienteInCache():
+    for cliente in getAllClientes():
+        data_cache[cliente] = orjson.dumps(getAnomaliasCliente(cliente))
+        
+def getDashboardCliente(cliente):
+    return data_cache[cliente]
+
+
 def cargar_datos(file_path):
     """Cargar datos de csv"""
     df = pd.read_csv(file_path)
@@ -100,3 +186,6 @@ def preprocesa_datos(df):
     df.fillna(0, inplace=True)
 
     return df
+
+def getCriticidades():
+    return ["alta", "media", "leve"]

@@ -1,5 +1,4 @@
 const host = window.location.origin;
-console.log("host: ", host)
 document.addEventListener("DOMContentLoaded", () => {
   cargarClientes();  // o el nombre de tu inicializador
 });
@@ -242,76 +241,51 @@ function obtenerCriticidadMaxima(lista) {
 }
 
 
-// Función para actualizar la tabla de anomalías
+// Función optimizada para actualizar la tabla de anomalías
 function actualizarTablaAnomalias(anomalias) {
     const tabla = document.getElementById("anomaliasTable");
     const tbody = tabla.querySelector("tbody");
-    tbody.innerHTML = "";  // ✅ Limpia solo las filas
+    tbody.innerHTML = "";  // Limpiar solo las filas de la tabla
 
-    console.log(anomalias)
-    // Agrupar anomalías por fecha
-    const agrupadas = {};
+    // Crear un fragmento de documento para reducir las manipulaciones del DOM
+    const fragment = document.createDocumentFragment();
 
-    anomalias.forEach(a => {
-        const fecha = new Date(a.fecha).toLocaleString();
-
-        if (!agrupadas[fecha]) {
-            agrupadas[fecha] = {
-                fecha,
-                presion: null,
-                temperatura: null,
-                volumen: null,
-                criticidades: []
-            };
-        }
-
-        const registro = agrupadas[fecha];
-
-        if (a.variable.toLowerCase() === "presion") registro.presion = a.valor;
-        if (a.variable.toLowerCase() === "temperatura") registro.temperatura = a.valor;
-        if (a.variable.toLowerCase() === "volumen") registro.volumen = a.valor;
-
-        registro.criticidades.push(a.criticidad);
-    });
-
-    // Convertir objeto a array y ordenar por fecha descendente
-    const filas = Object.values(agrupadas).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-    // Renderizar filas
-    filas.forEach(r => {
-        const fila = document.createElement("tr");
-
-        const tdFecha = document.createElement("td");
-        tdFecha.textContent = r.fecha;
-
-        const tdPresion = document.createElement("td");
-        tdPresion.textContent = r.presion !== null ? Number(r.presion).toFixed(2) : "-";
-
-        const tdTemp = document.createElement("td");
-        tdTemp.textContent = r.temperatura !== null ? Number(r.temperatura).toFixed(2) : "-";
-
-        const tdVol = document.createElement("td");
-        tdVol.textContent = r.volumen !== null ? Number(r.volumen).toFixed(2) : "-";
-
-        const tdCrit = document.createElement("td");
-        const nivel = obtenerCriticidadMaxima(r.criticidades);
-        tdCrit.textContent = nivel;
-        tdCrit.classList.add(`anomalia-${nivel}`);
-        tdCrit.style.fontWeight = "bold";
-
-        fila.append(tdFecha, tdPresion, tdTemp, tdVol, tdCrit);
-        tbody.appendChild(fila);
-    });
-
-    if (filas.length === 0) {
+    if (anomalias.length === 0) {
         const fila = document.createElement("tr");
         const celda = document.createElement("td");
         celda.colSpan = 5;
         celda.style.textAlign = "center";
         celda.textContent = "No se detectaron anomalías en el período seleccionado";
         fila.appendChild(celda);
-        tbody.appendChild(fila);
+        fragment.appendChild(fila);
+    } else {
+        anomalias.forEach(r => {
+            const fila = document.createElement("tr");
+
+            const tdFecha = document.createElement("td");
+            tdFecha.textContent = r.Fecha;
+
+            const tdPresion = document.createElement("td");
+            tdPresion.textContent = r.Presion !== null ? r.Presion.toFixed(2) : "-";
+
+            const tdTemp = document.createElement("td");
+            tdTemp.textContent = r.Temperatura !== null ? r.Temperatura.toFixed(2) : "-";
+
+            const tdVol = document.createElement("td");
+            tdVol.textContent = r.Volumen !== null ? r.Volumen.toFixed(2) : "-";
+
+            const tdCrit = document.createElement("td");
+            const nivel = obtenerCriticidadMaxima(r.criticidad);
+            tdCrit.textContent = nivel;
+            tdCrit.classList.add(`anomalia-${nivel}`, "font-bold");  // Agregar clase para el font-weight
+
+            fila.append(tdFecha, tdPresion, tdTemp, tdVol, tdCrit);
+            fragment.appendChild(fila);
+        });
     }
+
+    // Insertar todas las filas de una sola vez
+    tbody.appendChild(fragment);
 }
 
 
@@ -329,12 +303,10 @@ async function updateDashboard() {
     if (startDate) params.append("start", startDate);
     if (endDate) params.append("end", endDate);
 
-    const url = `${host}/api/mediciones/${cliente}`;
     const anomaliasUrl = `${host}/api/anomalias/${cliente}`;
 
     try {
-        const [response, resAnomalias] = await Promise.all([
-            fetch(url),
+        const [resAnomalias] = await Promise.all([
             fetch(anomaliasUrl)
         ]);
 
@@ -342,66 +314,48 @@ async function updateDashboard() {
             console.warn("❌ Error al obtener anomalías:", resAnomalias.status);
         }
         
-        if (!response.ok) throw new Error("No se encontraron datos");
-        const data = await response.json();
         // actualiza tabla de anomalias
         const anomalias = await resAnomalias.json();
-        actualizarTablaAnomalias(anomalias);
-        actualizarTarjetaEstado(data, anomalias);
+        
+        const anomalias_all_data = anomalias.data
+
+        const data_presion = anomalias.presion.data
+        const chartset_point_presion = anomalias.presion.data_points
+
+        const data_volumen = anomalias.volumen.data
+        const chartset_point_volumen = anomalias.volumen.data_points
+
+        const data_temperatura = anomalias.temperatura.data
+        const chartset_point_temperatura = anomalias.temperatura.data_points
+
+        self.onmessage = function (e) {
+            const data = e.data; // por ejemplo, un array grande
+            const result = procesarDatos(data); // aquí haces lo pesado
+          
+            self.postMessage(result); // devuelve resultado al hilo principal
+          };
+          
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => {
+                showDashboard(data_presion, data_temperatura, data_volumen,
+                    chartset_point_presion, chartset_point_temperatura, chartset_point_volumen);
+              console.log("✔️ Todas las funciones ejecutadas durante tiempo ocioso");
+            });
+          } else {
+            setTimeout(() => {
+                showDashboard(data_presion, data_temperatura, data_volumen,
+                    chartset_point_presion, chartset_point_temperatura, chartset_point_volumen);
+              console.log("✔️ Todas las funciones ejecutadas con fallback");
+            }, 10);
+          }
+          actualizarTarjetaEstado(data_temperatura, data_volumen, data_presion,
+            anomalias.temperatura.average, anomalias.presion.average, anomalias.volumen.average
+          );
+          actualizarTablaAnomalias(anomalias_all_data);
+          
 
 
-        const labels = data.map(d => new Date(d.fecha).toLocaleString());
-        const presionData = data.map(d => d.presion);
-        const temperaturaData = data.map(d => d.temperatura);
-        const volumenData = data.map(d => d.volumen);
-
-        const expand = (arr, margen) => {
-            const min = Math.min(...arr);
-            const max = Math.max(...arr);
-            return { min: Math.floor(min - margen), max: Math.ceil(max + margen) };
-        };
-
-        // -------- PRESIÓN --------
-        presionChart.data.labels = labels;
-        presionChart.data.datasets = [presionChart.data.datasets[0]];
-        presionChart.data.datasets[0].data = presionData;
-        const presionLimits = expand(presionData, 0.2);
-        presionChart.options.scales.y.min = presionLimits.min;
-        presionChart.options.scales.y.max = presionLimits.max;
-
-        // -------- TEMPERATURA --------
-        temperaturaChart.data.labels = labels;
-        temperaturaChart.data.datasets = [temperaturaChart.data.datasets[0]];
-        temperaturaChart.data.datasets[0].data = temperaturaData;
-        const tempLimits = expand(temperaturaData, 1);
-        temperaturaChart.options.scales.y.min = tempLimits.min;
-        temperaturaChart.options.scales.y.max = tempLimits.max;
-
-        // -------- VOLUMEN --------
-        volumenChart.data.labels = labels;
-        volumenChart.data.datasets = [volumenChart.data.datasets[0]];
-        volumenChart.data.datasets[0].data = volumenData;
-        const volLimits = expand(volumenData, 20);
-        volumenChart.options.scales.y.min = volLimits.min;
-        volumenChart.options.scales.y.max = volLimits.max;
-
-        const niveles = [
-            { nivel: "alta", color: "red" },
-            { nivel: "media", color: "orange" },
-            { nivel: "leve", color: "yellow" }
-        ];
-
-        for (const { nivel, color } of niveles) {
-            presionChart.data.datasets.push(crearDatasetAnomalias(anomalias, "Presion", nivel, color));
-            temperaturaChart.data.datasets.push(crearDatasetAnomalias(anomalias, "Temperatura", nivel, color));
-            volumenChart.data.datasets.push(crearDatasetAnomalias(anomalias, "Volumen", nivel, color));
-        }
-
-        presionChart.update();
-        temperaturaChart.update();
-        volumenChart.update();
-
-        console.log("📊 presionChart datasets:", presionChart.data.datasets);
+        
 
 
     } catch (error) {
@@ -411,39 +365,92 @@ async function updateDashboard() {
     
 }
 
+function showDashboard(data_presion, data_temperatura, data_volumen,
+    chartset_point_presion, chartset_point_temperatura, chartset_point_volumen
+){
+    const expand = (arr, margen) => {
+        const min = Math.min(...arr);
+        const max = Math.max(...arr);
+        return { min: Math.floor(min - margen), max: Math.ceil(max + margen) };
+    };
 
+    // -------- PRESIÓN --------
+    presionChart.data.labels = data_presion.fecha;
+    presionChart.data.datasets = [presionChart.data.datasets[0]];
+    presionChart.data.datasets[0].data = data_presion.valor;
+    const presionLimits = expand(data_presion.valor, 0.2);
+    presionChart.options.scales.y.min = presionLimits.min;
+    presionChart.options.scales.y.max = presionLimits.max;
+
+    // -------- TEMPERATURA --------
+    temperaturaChart.data.labels = data_temperatura.fecha;
+    temperaturaChart.data.datasets = [temperaturaChart.data.datasets[0]];
+    temperaturaChart.data.datasets[0].data = data_temperatura.valor ;
+    const tempLimits = expand(data_temperatura.valor, 1);
+    temperaturaChart.options.scales.y.min = tempLimits.min;
+    temperaturaChart.options.scales.y.max = tempLimits.max;
+
+    // -------- VOLUMEN --------
+    volumenChart.data.labels = data_volumen.fecha;
+    volumenChart.data.datasets = [volumenChart.data.datasets[0]];
+    volumenChart.data.datasets[0].data = data_volumen.valor;
+    const volLimits = expand(data_volumen.valor, 20);
+    volumenChart.options.scales.y.min = volLimits.min;
+    volumenChart.options.scales.y.max = volLimits.max;
+
+    const niveles = [
+        { nivel: "alta", color: "red" },
+        { nivel: "media", color: "orange" },
+        { nivel: "leve", color: "yellow" }
+    ];
+
+    for (const { nivel, color } of niveles) {
+        presionChart.data.datasets.push(crearDatasetAnomalias(chartset_point_presion[nivel], nivel, color));
+        temperaturaChart.data.datasets.push(crearDatasetAnomalias(chartset_point_temperatura[nivel], nivel, color));
+        volumenChart.data.datasets.push(crearDatasetAnomalias(chartset_point_volumen[nivel], nivel, color));
+    }
+
+    Chart.helpers.each([presionChart, temperaturaChart, volumenChart], chart => {
+        chart.update();
+      });
+
+    console.log("📊 presionChart datasets:", presionChart.data.datasets);
+}
 
 async function establecerFechasPorDefecto(cliente) {
-try {
-    const response = await fetch(`${host}/api/clientes/${cliente}/rango-fechas`);
-    const rango = await response.json();
-
-    console.log("rango:", rango);
-    if (!rango.max_fecha) throw new Error("No hay datos disponibles");
-
-    const maxFecha = new Date(rango.max_fecha);
-    const minFecha = new Date(maxFecha);
-    minFecha.setDate(maxFecha.getDate() - 30);
-    console.log("minFecha:", minFecha.toISOString());
-    console.log("minFecha.slice(0, 16):", minFecha.toISOString().slice(0, 16));
-    console.log("maxFecha:", maxFecha.toISOString());
-    console.log("minFecha.slice(0, 16):", maxFecha.toISOString().slice(0, 16));
-    
-
-    //document.getElementById("startDate").value = minFecha.toISOString().split("T")[0];
-    document.getElementById("startDate").value = minFecha.toISOString().slice(0, 16);
-    //document.getElementById("endDate").value = maxFecha.toISOString().split("T")[0];
-    document.getElementById("endDate").value = maxFecha.toISOString().slice(0,16);
-
-} catch (error) {
-    console.warn("Error estableciendo fechas por defecto:", error.message);
-    const hoy = new Date();
-    const hace30 = new Date();
-    hace30.setDate(hoy.getDate() - 30);
-
-    document.getElementById("startDate").value = hace30.toISOString().split("T")[0];
-    document.getElementById("endDate").value = hoy.toISOString().split("T")[0];
-}
+    if(cliente !== undefined){
+        try {
+            const response = await fetch(`${host}/api/clientes/${cliente}/rango-fechas`);
+            const rango = await response.json();
+        
+            console.log("rango:", rango);
+            if (!rango.max_fecha) throw new Error("No hay datos disponibles");
+        
+            const maxFecha = new Date(rango.max_fecha);
+            const minFecha = new Date(maxFecha);
+            minFecha.setDate(maxFecha.getDate() - 30);
+            console.log("minFecha:", minFecha.toISOString());
+            console.log("minFecha.slice(0, 16):", minFecha.toISOString().slice(0, 16));
+            console.log("maxFecha:", maxFecha.toISOString());
+            console.log("minFecha.slice(0, 16):", maxFecha.toISOString().slice(0, 16));
+            
+        
+            //document.getElementById("startDate").value = minFecha.toISOString().split("T")[0];
+            document.getElementById("startDate").value = minFecha.toISOString().slice(0, 16);
+            //document.getElementById("endDate").value = maxFecha.toISOString().split("T")[0];
+            document.getElementById("endDate").value = maxFecha.toISOString().slice(0,16);
+        
+        } catch (error) {
+            console.warn("Error estableciendo fechas por defecto:", error.message);
+            const hoy = new Date();
+            const hace30 = new Date();
+            hace30.setDate(hoy.getDate() - 30);
+        
+            document.getElementById("startDate").value = hace30.toISOString().split("T")[0];
+            document.getElementById("endDate").value = hoy.toISOString().split("T")[0];
+        }
+        
+    }
 }
 
 
@@ -454,7 +461,6 @@ async function cargarClientes() {
 
         const select = document.getElementById("clientSelect");
         select.innerHTML = ""; // limpiar opciones anteriores
-        console.log(clientes)
         clientes.clientes.forEach(cliente => {
             const option = document.createElement("option");
             option.value = cliente;
@@ -484,18 +490,11 @@ async function cargarClientes() {
     }
 }
 
-function crearDatasetAnomalias(anomalias, variable, nivel, color) {
-    const datos = anomalias
-        .filter(a => a.variable === variable && a.criticidad === nivel)
-        .map(a => ({
-            x: new Date(a.fecha).toLocaleString(),
-            y: a.valor
-        }));
-
+function crearDatasetAnomalias(data_points,nivel, color) {
     return {
         type: 'scatter',
         label: `Anomalías ${nivel}`,
-        data: datos,
+        data: data_points,
         parsing: false,
         pointBackgroundColor: color,
         pointRadius: 6,
@@ -512,39 +511,32 @@ function sincronizarZoom(chartOrigen, chartsDestino) {
         chart.options.scales.x.max = range.max;
         chart.update('none');
     });
+    
 }
 
-function actualizarTarjetaEstado(data, anomalias) {
-    console.log(anomalias)
-    const presionData = data.map(d => d.presion);
-    const temperaturaData = data.map(d => d.temperatura);
-    const volumenData = data.map(d => d.volumen);
-    const labels = data.map(d => new Date(d.fecha).toLocaleString());
-
-    // Calcular promedios
-    const promedioPresion = Number((presionData.reduce((a, b) => a + b, 0) / presionData.length)).toFixed(2);
-    const promedioTemperatura = Number((temperaturaData.reduce((a, b) => a + b, 0) / temperaturaData.length)).toFixed(2);
-    const promedioVolumen = Number((volumenData.reduce((a, b) => a + b, 0) / volumenData.length)).toFixed(2);
-
-
+function actualizarTarjetaEstado(data_temperatura, data_volumen, data_presion,
+    prom_temperatura, prom_presion, prom_volumen
+) {
+    
     // Mostrar promedios
-    document.getElementById('promedioPresion').textContent = promedioPresion;
-    document.getElementById('promedioTemperatura').textContent = promedioTemperatura;
-    document.getElementById('promedioVolumen').textContent = promedioVolumen;
+    document.getElementById('promedioPresion').textContent = prom_presion;
+    document.getElementById('promedioTemperatura').textContent = prom_temperatura;
+    document.getElementById('promedioVolumen').textContent = prom_volumen;
     // Últimos valores
-    document.getElementById('presionActual').textContent = Number(presionData.at(-1)).toFixed(2);
-    document.getElementById('temperaturaActual').textContent = Number(temperaturaData.at(-1)).toFixed(2);
-    document.getElementById('volumenActual').textContent = Number(volumenData.at(-1)).toFixed(2);
+    console.log("data presion")
+    console.log(data_presion.average)
+    document.getElementById('presionActual').textContent = Number(data_presion.valor.at(-1)).toFixed(2);
+    document.getElementById('temperaturaActual').textContent = Number(data_temperatura.valor.at(-1)).toFixed(2);
+    document.getElementById('volumenActual').textContent = Number(data_volumen.valor.at(-1)).toFixed(2);
 
     // Anomalías detectadas
-    document.getElementById('cantidadAnomalias').textContent = Number((anomalias.length / 3)).toFixed(0);
-
-    // Estado del cliente (último punto)
-    const ultimaFecha = labels.at(-1);
-    const ultimaAnomalia = anomalias.find(a => new Date(a.fecha).toLocaleString() === ultimaFecha);
+    document.getElementById('cantidadAnomalias').textContent = Number((data_presion.valor.length + data_temperatura.valor.length 
+        + data_volumen.valor.length / 3)).toFixed(0);
 
     const estado = document.getElementById('estadoCliente');
-    if (ultimaAnomalia) {
+    if (data_temperatura.criticidad.at(-1) !== 'normal' ||
+    data_presion.criticidad.at(-1) !== 'normal'||
+    data_volumen.criticidad.at(-1) !== 'normal') {
         estado.textContent = "⚠️ Alerta";
         estado.className = "status-indicator status-warning";
     } else {
@@ -572,3 +564,9 @@ function resetZoomTodos() {
   temperaturaChart.resetZoom();
   volumenChart.resetZoom();
 }
+
+
+window.addEventListener("load", () => {
+    const tiempo = performance.now();
+    console.log(`Tiempo total hasta onload: ${tiempo.toFixed(2)} ms`);
+});
