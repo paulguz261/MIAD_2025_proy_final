@@ -114,6 +114,30 @@ def saveDashboradClienteInCache():
         
 def getDashboardCliente(cliente):
     return data_cache[cliente]
+    
+def getDashboardClienteWithFilter(cliente, start_date_filter, end_date_filter):
+    # Carga de datos
+    anomalias_splitted = cnf.DIR_PARQUET_CLIENT_PREDICTION_FILE.format(cliente.lower())
+    anomalias_data = cnf.DIR_PARQUET_CLIENT_PROCESSED_FILE.format(cliente.lower())
+
+    df = pd.read_parquet(anomalias_splitted, engine='pyarrow')
+    df_anomalias_data = pd.read_parquet(anomalias_data, engine='pyarrow')
+
+    # Filtrado (hacer .copy() para evitar SettingWithCopyWarning)
+    df_filtrado = df[(df['fecha'] >= start_date_filter) & (df['fecha'] <= end_date_filter)].copy()
+    df_anomalias_data_filtrado = df_anomalias_data[(df_anomalias_data['Fecha'] >= start_date_filter) & (df_anomalias_data['Fecha'] <= end_date_filter)].copy()
+
+    # Ordenar y formatear fecha solo en el filtrado
+    df_anomalias_data_filtrado = df_anomalias_data_filtrado.sort_values(by="Fecha", ascending=False)
+    df_anomalias_data_filtrado["Fecha"] = df_anomalias_data_filtrado["Fecha"].dt.strftime("%d/%m/%Y %H:%M:%S")
+    
+    response = {
+    'data': df_anomalias_data_filtrado.to_dict(orient="records"),
+    'presion': filterData(df_filtrado, 'Presion'),
+    'volumen': filterData(df_filtrado, 'Volumen'),
+    'temperatura': filterData(df_filtrado, 'Temperatura')
+    }
+    return response    
 
 
 def cargar_datos(file_path):

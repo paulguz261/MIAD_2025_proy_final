@@ -303,7 +303,7 @@ async function updateDashboard() {
     if (startDate) params.append("start", startDate);
     if (endDate) params.append("end", endDate);
 
-    const anomaliasUrl = `${host}/api/anomalias/${cliente}`;
+    const anomaliasUrl = `${host}/api/anomalias/${cliente}?${params.toString()}`;
 
     try {
         const [resAnomalias] = await Promise.all([
@@ -365,39 +365,14 @@ async function updateDashboard() {
     
 }
 
-function showDashboard(data_presion, data_temperatura, data_volumen,
-    chartset_point_presion, chartset_point_temperatura, chartset_point_volumen
-){
-    const expand = (arr, margen) => {
-        const min = Math.min(...arr);
-        const max = Math.max(...arr);
-        return { min: Math.floor(min - margen), max: Math.ceil(max + margen) };
-    };
 
-    // -------- PRESIÓN --------
-    presionChart.data.labels = data_presion.fecha;
-    presionChart.data.datasets = [presionChart.data.datasets[0]];
-    presionChart.data.datasets[0].data = data_presion.valor;
-    const presionLimits = expand(data_presion.valor, 0.2);
-    presionChart.options.scales.y.min = presionLimits.min;
-    presionChart.options.scales.y.max = presionLimits.max;
-
-    // -------- TEMPERATURA --------
+async function loadChartTemperatura(data_temperatura, chartset_data){
     temperaturaChart.data.labels = data_temperatura.fecha;
     temperaturaChart.data.datasets = [temperaturaChart.data.datasets[0]];
     temperaturaChart.data.datasets[0].data = data_temperatura.valor ;
     const tempLimits = expand(data_temperatura.valor, 1);
     temperaturaChart.options.scales.y.min = tempLimits.min;
     temperaturaChart.options.scales.y.max = tempLimits.max;
-
-    // -------- VOLUMEN --------
-    volumenChart.data.labels = data_volumen.fecha;
-    volumenChart.data.datasets = [volumenChart.data.datasets[0]];
-    volumenChart.data.datasets[0].data = data_volumen.valor;
-    const volLimits = expand(data_volumen.valor, 20);
-    volumenChart.options.scales.y.min = volLimits.min;
-    volumenChart.options.scales.y.max = volLimits.max;
-
     const niveles = [
         { nivel: "alta", color: "red" },
         { nivel: "media", color: "orange" },
@@ -405,14 +380,66 @@ function showDashboard(data_presion, data_temperatura, data_volumen,
     ];
 
     for (const { nivel, color } of niveles) {
-        presionChart.data.datasets.push(crearDatasetAnomalias(chartset_point_presion[nivel], nivel, color));
-        temperaturaChart.data.datasets.push(crearDatasetAnomalias(chartset_point_temperatura[nivel], nivel, color));
-        volumenChart.data.datasets.push(crearDatasetAnomalias(chartset_point_volumen[nivel], nivel, color));
+        temperaturaChart.data.datasets.push(crearDatasetAnomalias(chartset_data[nivel], nivel, color));
     }
+    temperaturaChart.update();
 
-    Chart.helpers.each([presionChart, temperaturaChart, volumenChart], chart => {
-        chart.update();
-      });
+}
+
+async function loadChartVolumen(data_volumen, chartset_data){
+    volumenChart.data.labels = data_volumen.fecha;
+    volumenChart.data.datasets = [volumenChart.data.datasets[0]];
+    volumenChart.data.datasets[0].data = data_volumen.valor;
+    const volLimits = expand(data_volumen.valor, 20);
+    volumenChart.options.scales.y.min = volLimits.min;
+    volumenChart.options.scales.y.max = volLimits.max;
+    const niveles = [
+        { nivel: "alta", color: "red" },
+        { nivel: "media", color: "orange" },
+        { nivel: "leve", color: "yellow" }
+    ];
+
+    for (const { nivel, color } of niveles) {
+        volumenChart.data.datasets.push(crearDatasetAnomalias(chartset_data[nivel], nivel, color));
+    }
+    volumenChart.update();
+}
+
+
+
+async function loadChartPresion(data_presion, chartset_data){
+    presionChart.data.labels = data_presion.fecha;
+    presionChart.data.datasets = [presionChart.data.datasets[0]];
+    presionChart.data.datasets[0].data = data_presion.valor;
+    const presionLimits = expand(data_presion.valor, 0.2);
+    presionChart.options.scales.y.min = presionLimits.min;
+    presionChart.options.scales.y.max = presionLimits.max;
+    const niveles = [
+        { nivel: "alta", color: "red" },
+        { nivel: "media", color: "orange" },
+        { nivel: "leve", color: "yellow" }
+    ];
+
+    for (const { nivel, color } of niveles) {
+        presionChart.data.datasets.push(crearDatasetAnomalias(chartset_data[nivel], nivel, color));
+    }
+    presionChart.update();
+}
+
+const expand = (arr, margen) => {
+    const min = Math.min(...arr);
+    const max = Math.max(...arr);
+    return { min: Math.floor(min - margen), max: Math.ceil(max + margen) };
+};
+
+async function showDashboard(data_presion, data_temperatura, data_volumen,
+    chartset_point_presion, chartset_point_temperatura, chartset_point_volumen
+){
+    
+
+    await loadChartTemperatura(data_temperatura, chartset_point_temperatura )
+    await loadChartVolumen(data_volumen, chartset_point_volumen)
+    await loadChartPresion(data_presion, chartset_point_presion)
 
     console.log("📊 presionChart datasets:", presionChart.data.datasets);
 }
@@ -473,16 +500,13 @@ async function cargarClientes() {
 
     // Establecer fechas con base en el último dato real
     await establecerFechasPorDefecto(clienteSeleccionado);
-    updateDashboard();
 
     // Agregar listeners
     document.getElementById("clientSelect").addEventListener("change", async () => {
         const nuevoCliente = document.getElementById("clientSelect").value;
         await establecerFechasPorDefecto(nuevoCliente);
-        updateDashboard();
     });
-    document.getElementById("startDate").addEventListener("change", updateDashboard);
-    document.getElementById("endDate").addEventListener("change", updateDashboard);
+    document.getElementById("btnFilter").addEventListener("click", updateDashboard);
 
 
     } catch (error) {

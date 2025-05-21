@@ -16,7 +16,7 @@ from pathlib import Path
 from models.isolation_model import IsolationForestWithSeverity
 from services.preprocessing import create_diff_variables
 from contugas_anomaly_project import preprocess as pre
-
+from datetime import datetime
 
 
 router = APIRouter()
@@ -74,7 +74,12 @@ def rango_fechas(cliente: str, db: Session = Depends(get_db)):
 def obtener_anomalias(
     cliente: str
 ):
-    return Response(pre.getDashboardCliente(cliente), content_type="application/json")
+    start_param = request.args.get("start")
+    end_param = request.args.get("end")
+    if(start_param == None and end_param == None):
+        return Response(pre.getDashboardCliente(cliente), content_type="application/json")
+    return pre.getDashboardClienteWithFilter(cliente, datetime.fromisoformat(start_param), 
+                                            datetime.fromisoformat(end_param))
 
 @app.route("/contugas/dashboard", methods=['GET'])
 def getDashboard():
