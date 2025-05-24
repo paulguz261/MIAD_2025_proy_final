@@ -16,12 +16,6 @@
 <body>
     <header>
         <h1>Contugas Dashboard</h1>
-        <nav>
-            <a href="#dashboard">Dashboard</a>
-            <a href="#clientes">Clientes</a>
-            <a href="#anomalías">Anomalías</a>
-            <a href="#reportes">Reportes</a>
-        </nav>
     </header>
 
     <div class="container">
@@ -41,7 +35,7 @@
                 <input type="datetime-local" id="endDate">
             </div>
             <div style="margin-top: 1rem;">
-            <button id="btnFilter">Cargar</button>
+            <button id="btnFilter">Consultar</button>
             </div>
         </div>
 
@@ -73,7 +67,6 @@
         </div>
 
         <div class="section card">
-    <button onclick="resetZoomTodos()">Resetear Zoom</button>
             <h2>Gráficos de Variables</h2>
             <div class="chart-container">
                 <div class="chart-title">Presión (bar)</div>
@@ -132,7 +125,6 @@
         </div>
 
         <div class="section card">
-    <button onclick="resetZoomTodos()">Resetear Zoom</button>
             <h2>Tabla de Anomalías</h2>
             <div class="scrollable-table">
             <table id="anomaliasTable">
@@ -150,19 +142,6 @@
             </div>
         </div>
 
-        <div class="section card">
-    <button onclick="resetZoomTodos()">Resetear Zoom</button>
-            <h2>Alertas y Notificaciones</h2>
-            <p id="alertas">No hay alertas activas.</p>
-        </div>
-
-        <div class="section card">
-    <button onclick="resetZoomTodos()">Resetear Zoom</button>
-            <h2>Reportes Generados</h2>
-            <ul id="reportesGenerados">
-                <li>No hay reportes generados.</li>
-            </ul>
-        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
