@@ -1,4 +1,9 @@
 # api/endpoints.py
+import sys
+import os
+from flask import Flask, jsonify, request, render_template, Response
+from flask_cors import CORS
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -10,63 +15,44 @@ import joblib
 from pathlib import Path
 from models.isolation_model import IsolationForestWithSeverity
 from services.preprocessing import create_diff_variables
+from contugas_anomaly_project import preprocess as pre
+from datetime import datetime
 
 
 router = APIRouter()
-
+# Crear la instancia de Flask y especificar la carpeta de plantillas
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../templates'))
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../static'))
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+# Allow frontend (JavaScript) to connect
+CORS(app)
 
 @router.get("/test")
 def test_db(db: Session = Depends(get_db)):
     data = db.query(Medicion).count()
     return {"data": [data]}
 
-@router.get("/clientes")
-def obtener_clientes(db: Session = Depends(get_db)):
-    clientes = db.query(Medicion.cliente).distinct().all()
-    return [c[0] for c in clientes if c[0]]
+@app.route("/api/clientes", methods=['GET'])
+def obtener_clientes():
+    return {"clientes": pre.getAllClientes()}
 
-@router.get("/mediciones/{cliente}")
+@app.route("/api/mediciones/<cliente>", methods=['GET'])
 def obtener_mediciones(
-    cliente: str,
-    start: Optional[datetime] = Query(None),
-    end: Optional[datetime] = Query(None),
-    page: int = Query(1, ge=1),
-    limit: int = Query(1000, ge=1, le=10000)
+    cliente: str
 ):
-    db: Session = SessionLocal()
-    query = db.query(Medicion).filter(Medicion.cliente.like(cliente))
-
-    if start:
-        query = query.filter(Medicion.fecha >= start)
-    if end:
-        query = query.filter(Medicion.fecha <= end)
-
-    # Paginación
-    print(str(query))
-    offset = (page - 1) * limit
-    resultados = query.order_by(Medicion.fecha.asc()).offset(offset).limit(limit).all()
-    
-    print("→ Cliente recibido:", cliente)
-    print("→ Resultados obtenidos:", resultados)
-    # print("→ Cantidad:", len(resultados))
-
-    # print("→ Primer resultado:", resultados[0].__dict__)
-
-    if not resultados:
+    data_cliente = pre.readDataCliente(cliente)
+    if not data_cliente:
         raise HTTPException(status_code=404, detail="No se encontraron mediciones")
-
-
     output = [
         {
-            "fecha": m.fecha,
-            "presion": m.presion,
-            "temperatura": m.temperatura,
-            "volumen": m.volumen,
+            "fecha": m['Fecha'],
+            "presion": m['Presion'],
+            "temperatura": m['Temperatura'],
+            "volumen": m['Volumen'],
         }
-        for m in resultados
+        for m in data_cliente
     ]
-    db.close()
-    return output
+    return jsonify(output)
 
 
 @router.get("/clientes/{cliente}/rango-fechas")
@@ -84,65 +70,23 @@ def rango_fechas(cliente: str, db: Session = Depends(get_db)):
     return {"min_fecha": min_fecha, "max_fecha": max_fecha}
 
 
-@router.get("/anomalias/{cliente}")
+@app.route("/api/anomalias/<cliente>", methods=['GET'])
 def obtener_anomalias(
-    cliente: str,
-    start: datetime = Query(...),
-    end: datetime = Query(...),
-    db: Session = Depends(get_db)
+    cliente: str
 ):
-    # 1. Cargar datos históricos para el cliente
-    query = (
-        db.query(Medicion)
-        .filter(Medicion.cliente.ilike(cliente))
-        .filter(Medicion.fecha >= start)
-        .filter(Medicion.fecha <= end)
-        .order_by(Medicion.fecha)
-    )
-    registros = query.all()
+    start_param = request.args.get("start")
+    end_param = request.args.get("end")
+    if(start_param == None and end_param == None):
+        return Response(pre.getDashboardCliente(cliente), content_type="application/json")
+    return pre.getDashboardClienteWithFilter(cliente, datetime.fromisoformat(start_param), 
+                                            datetime.fromisoformat(end_param))
 
-    if not registros:
-        raise HTTPException(status_code=404, detail="No hay datos para el cliente en ese rango")
+@app.route("/contugas/dashboard", methods=['GET'])
+def getDashboard():
+    return render_template("dashboard.html")
 
-    df = pd.DataFrame([{
-        "fecha": r.fecha,
-        "Presion": r.presion,
-        "Temperatura": r.temperatura,
-        "Volumen": r.volumen
-    } for r in registros])
-
-    # 2. Cargar modelo correspondiente
-
-    base_dir = Path(__file__).resolve().parent.parent
-    modelo_path = base_dir / "models" / f"{cliente}_pipeline.pkl"
-    if not modelo_path.exists():
-        raise HTTPException(status_code=404, detail=f"No se encontró el modelo para {cliente}")
-
-    modelo = joblib.load(modelo_path)
-
-    
-    # Preprocesar datos
-    df = create_diff_variables(df)
-    # df = df.dropna()
-    # 3. Aplicar el modelo
-    X = df[['Presion', 'Temperatura', 'Volumen','delta_volumen','delta_presion','delta_temperatura']]
-    predicciones = modelo.predict_severity(X) 
-
-    df["criticidad"] = predicciones
-
-    # 4. Filtrar anomalías y formatear
-    anomalias = df[df["criticidad"] != "normal"]
-    print("🔍 Cantidad de anomalías:", len(anomalias))
-    # print(anomalias.head().to_dict())
-    print(anomalias.isna().sum())
-    resultado = []
-    for i, row in anomalias.iterrows():
-        for var in ["Presion", "Temperatura", "Volumen"]:
-            resultado.append({
-                "fecha": row["fecha"],
-                "variable": var,
-                "valor": row[var],
-                "criticidad": row["criticidad"]
-            })
-    print(resultado)
-    return resultado    
+if __name__ == '__main__':
+    #pre.readDataExcel()
+    #pre.processAnomalias()
+    pre.saveDashboradClienteInCache()
+    app.run(host="0.0.0.0", port=5000, debug=True)
